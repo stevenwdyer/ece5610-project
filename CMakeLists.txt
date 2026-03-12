@@ -11,7 +11,10 @@ pico_sdk_init()
 
 add_executable(${PROJECT_NAME}
     src/main.c
+    src/imu.c
 )
+
+target_include_directories(ece5610-project PRIVATE inc)
 
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
@@ -22,5 +25,6 @@ target_link_libraries(${PROJECT_NAME}
     pico_stdlib
     pico_cyw43_arch_none
     hardware_gpio
+    hardware_i2c
     hardware_adc
 )
