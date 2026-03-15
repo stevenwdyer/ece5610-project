@@ -3,6 +3,7 @@
 #include "hardware/i2c.h"
 
 #define IMU_I2C i2c1
+#define IMU_I2C_FREQ 400000
 #define IMU_SDA_PIN 14
 #define IMU_SCL_PIN 15
 

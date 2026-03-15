@@ -5,53 +5,36 @@
 #include "hardware/adc.h"
 #include "hardware/i2c.h"
 #include "imu.h"
+#include "motor.h"
 
 #define POT_PIN 26
 
-static bool mpu_read_reg(uint8_t reg, uint8_t *value) {
-    int w = i2c_write_blocking(IMU_I2C, IMU_ADDRESS, &reg, 1, true);
-    if (w != 1) {
-        return false;
-    }
-    int r = i2c_read_blocking(IMU_I2C, IMU_ADDRESS, value, 1, false);
-    if (r != 1) {
-        return false;
-    }
+void spin_motor_steps(int steps, bool clockwise, uint delay_us) {
+    gpio_put(MOTOR_DIR_PIN, clockwise ? 1 : 0); // Set direction
 
-    return true;
+    for (int i = 0; i < steps; i++) {
+        gpio_put(MOTOR_STEP_PIN, 1);
+        sleep_us(delay_us); // Dictates speed: lower value means faster spin
+        gpio_put(MOTOR_STEP_PIN, 0);
+        sleep_us(delay_us);
+    }
 }
 
 int main() {
     stdio_init_all();
-    sleep_ms(3000);
+    gpio_init(MOTOR_DIR_PIN);
+    gpio_init(MOTOR_STEP_PIN);
+    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
+    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
 
-    printf("program start\r\n");
+    while (1) {
+        // Spin clockwise for 200 steps (one revolution at full steps)
+        spin_motor_steps(200, true, 1000); 
+        sleep_ms(2000); // Wait 2 seconds
 
-    i2c_init(IMU_I2C, 400000);
-    printf("i2c_init done\r\n");
-
-    gpio_set_function(IMU_SDA_PIN, GPIO_FUNC_I2C);
-    printf("SDA set\r\n");
-
-    gpio_set_function(IMU_SCL_PIN, GPIO_FUNC_I2C);
-    printf("SCL set\r\n");
-
-    gpio_pull_up(IMU_SDA_PIN);
-    gpio_pull_up(IMU_SCL_PIN);
-    printf("pullups enabled\r\n");
-
-    sleep_ms(1000);
-
-    while (true) {
-        uint8_t who = 0;
-        printf("before WHO_AM_I read\r\n");
-
-        if (mpu_read_reg(WHO_AM_I, &who)) {
-            printf("WHO_AM_I = 0x%02X\r\n", who);
-        } else {
-            printf("WHO_AM_I read failed\r\n");
-        }
-
-        sleep_ms(1000);
+        // Spin counter-clockwise
+        spin_motor_steps(200, false, 500); 
+        sleep_ms(2000); // Wait 2 seconds
     }
+    return 0;
 }
