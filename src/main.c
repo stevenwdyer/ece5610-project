@@ -8,33 +8,54 @@
 #include "motor.h"
 
 #define POT_PIN 26
+#define BALANCE_POINT 3200
+#define DEADBAND 10
 
-void spin_motor_steps(int steps, bool clockwise, uint delay_us) {
-    gpio_put(MOTOR_DIR_PIN, clockwise ? 1 : 0); // Set direction
+static void motor_step(bool dir, uint delay_us) {
+    gpio_put(MOTOR_DIR_PIN, dir);
+    sleep_us(5);
 
-    for (int i = 0; i < steps; i++) {
-        gpio_put(MOTOR_STEP_PIN, 1);
-        sleep_us(delay_us); // Dictates speed: lower value means faster spin
-        gpio_put(MOTOR_STEP_PIN, 0);
-        sleep_us(delay_us);
-    }
+    gpio_put(MOTOR_STEP_PIN, 1);
+    sleep_us(delay_us);
+    gpio_put(MOTOR_STEP_PIN, 0);
+    sleep_us(delay_us);
 }
 
-int main() {
+static uint compute_delay_us(int error_mag) {
+    if (error_mag > 1000) return 300;
+    if (error_mag > 600)  return 500;
+    if (error_mag > 300)  return 800;
+    if (error_mag > 100)  return 1200;
+    return 2000;
+}
+
+int main () {
     stdio_init_all();
-    gpio_init(MOTOR_DIR_PIN);
+
     gpio_init(MOTOR_STEP_PIN);
-    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
+    gpio_init(MOTOR_DIR_PIN);
+
     gpio_set_dir(MOTOR_STEP_PIN, GPIO_OUT);
+    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
+
+    adc_init();
+    adc_gpio_init(POT_PIN);
+    adc_select_input(0);
 
     while (1) {
-        // Spin clockwise for 200 steps (one revolution at full steps)
-        spin_motor_steps(200, true, 1000); 
-        sleep_ms(2000); // Wait 2 seconds
+        uint16_t pot_value = adc_read();
+        int error = (int)pot_value - BALANCE_POINT;
+        int mag = (error >= 0) ? error : -error;
 
-        // Spin counter-clockwise
-        spin_motor_steps(200, false, 500); 
-        sleep_ms(2000); // Wait 2 seconds
+        printf("pot = %u error = %d\n", pot_value, error);
+
+        if (pot_value > BALANCE_POINT + DEADBAND) {
+            motor_step(true, compute_delay_us(mag));
+        } else if (pot_value < BALANCE_POINT - DEADBAND) {
+            motor_step(false, compute_delay_us(mag));
+        } else {
+            sleep_ms(2);
+        }
+
     }
-    return 0;
 }
