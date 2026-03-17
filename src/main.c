@@ -25,7 +25,7 @@ int main() {
     gpio_init(MOTOR_DIR_PIN);
     gpio_init(MOTOR_STEP_PIN);
     gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
-    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
+    gpio_set_dir(MOTOR_STEP_PIN, GPIO_OUT);
 
     while (1) {
         // Spin clockwise for 200 steps (one revolution at full steps)
