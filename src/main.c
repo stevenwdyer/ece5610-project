@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
+#include "motor.h"
 
 #define POT_PIN         26
 #define POT_ADC_INPUT   0
@@ -14,66 +15,40 @@
 #define BALANCE_POINT   2048
 #define DEADBAND        150
 
-// Half-step sequence for smoother motion
-static const uint8_t step_table[8][4] = {
-    {1, 0, 0, 0},
-    {1, 1, 0, 0},
-    {0, 1, 0, 0},
-    {0, 1, 1, 0},
-    {0, 0, 1, 0},
-    {0, 0, 1, 1},
-    {0, 0, 0, 1},
-    {1, 0, 0, 1}
-};
-
-static int current_step = 0;
-
-static void motor_output_step(int step_index) {
-    gpio_put(IN1_PIN, step_table[step_index][0]);
-    gpio_put(IN2_PIN, step_table[step_index][1]);
-    gpio_put(IN3_PIN, step_table[step_index][2]);
-    gpio_put(IN4_PIN, step_table[step_index][3]);
+static void motor_step_pulse(uint32_t pulse_width_us) {
+    gpio_put(MOTOR_STEP_PIN, 1);
+    sleep_us(pulse_width_us);
+    gpio_put(MOTOR_STEP_PIN, 0);
 }
 
-static void motor_release(void) {
-    gpio_put(IN1_PIN, 0);
-    gpio_put(IN2_PIN, 0);
-    gpio_put(IN3_PIN, 0);
-    gpio_put(IN4_PIN, 0);
-}
+static void motor_step(int dir, uint32_t step_delay_us) {
+    gpio_put(MOTOR_DIR_PIN, (dir > 0) ? 1 : 0);
 
-static void motor_step(int dir, uint32_t delay_us) {
-    current_step += dir;
+    sleep_us(5);
 
-    if (current_step >= 8) current_step = 0;
-    if (current_step < 0)  current_step = 7;
+    motor_step_pulse(10);
 
-    motor_output_step(current_step);
-    sleep_us(delay_us);
+    sleep_us(step_delay_us);
 }
 
 static uint32_t compute_delay_us(int error_mag) {
-    if (error_mag > 1600) return 800;
-    if (error_mag > 1200) return 1200;
-    if (error_mag > 800)  return 1800;
-    if (error_mag > 400)  return 2500;
-    return 4000;
+    if (error_mag > 1600) return 300;
+    if (error_mag > 1200) return 600;
+    if (error_mag > 800)  return 1000;
+    if (error_mag > 400)  return 1800;
+    return 3000;
 }
 
 int main() {
     stdio_init_all();
 
-    gpio_init(IN1_PIN);
-    gpio_init(IN2_PIN);
-    gpio_init(IN3_PIN);
-    gpio_init(IN4_PIN);
+    gpio_init(MOTOR_STEP_PIN);
+    gpio_set_dir(MOTOR_STEP_PIN, GPIO_OUT);
+    gpio_put(MOTOR_STEP_PIN, 0);
 
-    gpio_set_dir(IN1_PIN, GPIO_OUT);
-    gpio_set_dir(IN2_PIN, GPIO_OUT);
-    gpio_set_dir(IN3_PIN, GPIO_OUT);
-    gpio_set_dir(IN4_PIN, GPIO_OUT);
-
-    motor_release();
+    gpio_init(MOTOR_DIR_PIN);
+    gpio_set_dir(MOTOR_DIR_PIN, GPIO_OUT);
+    gpio_put(MOTOR_DIR_PIN, 0);
 
     adc_init();
     adc_gpio_init(POT_PIN);
@@ -90,12 +65,11 @@ int main() {
 
         if (pot_value > BALANCE_POINT + DEADBAND) {
             motor_step(+1, compute_delay_us(mag));
-        } 
+        }
         else if (pot_value < BALANCE_POINT - DEADBAND) {
             motor_step(-1, compute_delay_us(mag));
-        } 
+        }
         else {
-            motor_release();
             sleep_ms(2);
         }
     }
