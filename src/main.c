@@ -16,7 +16,7 @@
 #define CONTROL_DT_US     10000
 
 #define ACCEL_LIMIT       1200
-#define MAX_SPEED         2000
+#define MAX_SPEED         3000
 #define INTEGRAL_LIMIT    300
 
 float filtered_pot = BALANCE_POINT;
