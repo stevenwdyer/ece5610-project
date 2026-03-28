@@ -6,18 +6,16 @@
 
 #define POT_PIN         26
 #define POT_ADC_INPUT   0
+#define ALPHA           0.1
 
-#define IN1_PIN         8
-#define IN2_PIN         9
-#define IN3_PIN         10
-#define IN4_PIN         11
+#define BALANCE_POINT   2176 // 1874 fully tilted back, 2477 fully tilted forward
+#define DEADBAND        15
 
-#define BALANCE_POINT   2048
-#define DEADBAND        150
+float filtered_pot = BALANCE_POINT;
 
-static void motor_step_pulse(uint32_t pulse_width_us) {
+static void motor_step_pulse() {
     gpio_put(MOTOR_STEP_PIN, 1);
-    sleep_us(pulse_width_us);
+    sleep_us(STEP_PULSE);
     gpio_put(MOTOR_STEP_PIN, 0);
 }
 
@@ -32,11 +30,12 @@ static void motor_step(int dir, uint32_t step_delay_us) {
 }
 
 static uint32_t compute_delay_us(int error_mag) {
-    if (error_mag > 1600) return 300;
-    if (error_mag > 1200) return 600;
-    if (error_mag > 800)  return 1000;
-    if (error_mag > 400)  return 1800;
-    return 3000;
+    if (error_mag > 250) return 400;
+    if (error_mag > 180) return 700;
+    if (error_mag > 120)  return 1100;
+    if (error_mag > 60)  return 1800;
+    if (error_mag > 25)  return 2600;
+    return 4000;
 }
 
 int main() {
@@ -58,16 +57,19 @@ int main() {
 
     while (1) {
         uint16_t pot_value = adc_read();
-        int error = (int)pot_value - BALANCE_POINT;
+
+        filtered_pot += ALPHA * ((float)pot_value - filtered_pot);
+
+        int error = BALANCE_POINT - filtered_pot;
         int mag = (error >= 0) ? error : -error;
 
         printf("pot=%u error=%d\n", pot_value, error);
 
-        if (pot_value > BALANCE_POINT + DEADBAND) {
-            motor_step(+1, compute_delay_us(mag));
-        }
-        else if (pot_value < BALANCE_POINT - DEADBAND) {
+        if (error > DEADBAND) {
             motor_step(-1, compute_delay_us(mag));
+        }
+        else if (error < -DEADBAND) {
+            motor_step(+1, compute_delay_us(mag));
         }
         else {
             sleep_ms(2);
