@@ -9,14 +9,14 @@
 #define POT_ADC_INPUT     0
 #define ALPHA             0.1
 
-#define BALANCE_POINT     2176
-#define DEADBAND          8
+#define BALANCE_POINT     2095
+#define DEADBAND          10
 
 #define CONTROL_DT        0.01
 #define CONTROL_DT_US     10000
 
-#define ACCEL_LIMIT       1200
-#define MAX_SPEED         3000
+#define ACCEL_LIMIT       8000
+#define MAX_SPEED         2000
 #define INTEGRAL_LIMIT    300
 
 float filtered_pot = BALANCE_POINT;
@@ -28,9 +28,9 @@ float integral = 0;
 float prev_error = 0;
 float derivative = 0;
 
-float Kp = 8;
+float Kp = 10;
 float Ki = 0;
-float Kd = 0;
+float Kd = 1;
 
 uint64_t last_step_us = 0;
 uint64_t last_control_us = 0;
@@ -103,25 +103,28 @@ int main() {
             uint16_t pot_value = adc_read();
             filtered_pot += ALPHA * ((float)pot_value - filtered_pot);
 
-            float error = BALANCE_POINT - filtered_pot;
+            float error = filtered_pot - BALANCE_POINT;
 
             if (fabsf(error) < DEADBAND) {
-                error = 0.0f;
+                error = 0;
+                target_speed = 0;
+                integral = 0;
+            } else {
+
+                integral += error * CONTROL_DT;
+                if (integral > INTEGRAL_LIMIT) integral = INTEGRAL_LIMIT;
+                if (integral < -INTEGRAL_LIMIT) integral = -INTEGRAL_LIMIT;
+
+                float raw_derivative = (error - prev_error) / CONTROL_DT;
+                derivative = 0.8f * derivative + 0.2f * raw_derivative;
+
+                float output = Kp * error + Ki * integral + Kd * derivative;
+
+                if (output > MAX_SPEED) output = MAX_SPEED;
+                if (output < -MAX_SPEED) output = -MAX_SPEED;
+
+                target_speed = output;
             }
-
-            integral += error * CONTROL_DT;
-            if (integral > INTEGRAL_LIMIT) integral = INTEGRAL_LIMIT;
-            if (integral < -INTEGRAL_LIMIT) integral = -INTEGRAL_LIMIT;
-
-            float raw_derivative = (error - prev_error) / CONTROL_DT;
-            derivative = 0.8f * derivative + 0.2f * raw_derivative;
-
-            float output = Kp * error + Ki * integral + Kd * derivative;
-
-            if (output > MAX_SPEED) output = MAX_SPEED;
-            if (output < -MAX_SPEED) output = -MAX_SPEED;
-
-            target_speed = output;
             prev_error = error;
 
             update_speed_ramp();
