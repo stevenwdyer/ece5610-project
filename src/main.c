@@ -9,14 +9,14 @@
 #define POT_ADC_INPUT     0
 #define ALPHA             0.1
 
-#define BALANCE_POINT     2095
-#define DEADBAND          10
+#define BALANCE_POINT     2280
+#define DEADBAND          20
 
 #define CONTROL_DT        0.01
 #define CONTROL_DT_US     10000
 
 #define ACCEL_LIMIT       8000
-#define MAX_SPEED         2000
+#define MAX_SPEED         3000
 #define INTEGRAL_LIMIT    300
 
 float filtered_pot = BALANCE_POINT;
@@ -28,12 +28,23 @@ float integral = 0;
 float prev_error = 0;
 float derivative = 0;
 
-float Kp = 10;
+float Kp = 8;
 float Ki = 0;
-float Kd = 1;
+float Kd = 0;
 
 uint64_t last_step_us = 0;
 uint64_t last_control_us = 0;
+
+uint16_t read_pot_average(int samples) {
+    uint32_t sum = 0;
+
+    for (int i = 0; i < samples; i++) {
+        sum += adc_read();
+        sleep_us(50);
+    }
+
+    return (uint16_t)(sum / samples);
+}
 
 static void motor_step_pulse() {
     gpio_put(MOTOR_STEP_PIN, 1);
@@ -100,7 +111,7 @@ int main() {
         uint64_t now = time_us_64();
 
         if (now - last_control_us >= CONTROL_DT_US) {
-            uint16_t pot_value = adc_read();
+            uint16_t pot_value = read_pot_average(8);
             filtered_pot += ALPHA * ((float)pot_value - filtered_pot);
 
             float error = filtered_pot - BALANCE_POINT;
