@@ -10,7 +10,7 @@
 #define ALPHA             0.1
 
 #define BALANCE_POINT     2280
-#define DEADBAND          20
+#define DEADBAND          10
 
 #define CONTROL_DT        0.01
 #define CONTROL_DT_US     10000
@@ -30,7 +30,7 @@ float derivative = 0;
 
 float Kp = 8;
 float Ki = 0;
-float Kd = 0;
+float Kd = 0.8;
 
 uint64_t last_step_us = 0;
 uint64_t last_control_us = 0;
