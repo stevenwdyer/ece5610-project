@@ -11,8 +11,8 @@ pico_sdk_init()
 
 add_executable(${PROJECT_NAME}
     src/main.c
-    src/imu.c
     src/motor.c
+    src/pd.c
 )
 
 target_include_directories(ece5610-project PRIVATE inc)
@@ -26,6 +26,5 @@ target_link_libraries(${PROJECT_NAME}
     pico_stdlib
     pico_cyw43_arch_none
     hardware_gpio
-    hardware_i2c
     hardware_adc
 )
