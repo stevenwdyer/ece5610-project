@@ -1,4 +1,4 @@
-# ece5610-project" Self-Balancing Weight Scale
+# ece5610-project - Self-Balancing Weight Scale
 
 A self-balancing weight scale bulit arounf a Raspberry Pi Pico. A potentiometer senses a change in angle of the beam, a PID controller running at 100Hz computes a corrective velocity, and a stepper motoer accuates a counter weight on a ball-screw to balance the system.
 
