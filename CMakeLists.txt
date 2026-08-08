@@ -12,7 +12,7 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME}
     src/main.c
     src/motor.c
-    src/pd.c
+    src/pid.c
 )
 
 target_include_directories(ece5610-project PRIVATE inc)

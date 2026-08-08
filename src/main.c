@@ -2,7 +2,7 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
-#include "pd.h"
+#include "pid.h"
 #include "motor.h"
 
 #define POT_PIN           26
@@ -17,7 +17,6 @@
 
 #define ACCEL_LIMIT       8000
 #define MAX_SPEED         3000
-#define INTEGRAL_LIMIT    300
 
 float filtered_pot = BALANCE_POINT;
 
@@ -26,7 +25,6 @@ uint16_t read_pot_average(int samples) {
 
     for (int i = 0; i < samples; i++) {
         sum += adc_read();
-        sleep_us(50);
     }
 
     return (uint16_t)(sum / samples);
@@ -41,8 +39,8 @@ int main() {
     adc_gpio_init(POT_PIN);
     adc_select_input(POT_ADC_INPUT);
 
-    controller_t pd;
-    pd_init(&pd, 8, 0.8, CONTROL_DT);
+    controller_t pid;
+    pid_init(&pid, 8, 0.8, CONTROL_DT);
 
     motor_controller_t motor_ctrl;
     motor_controller_init(&motor_ctrl, ACCEL_LIMIT, CONTROL_DT);
@@ -64,9 +62,9 @@ int main() {
             if (fabsf(error) < DEADBAND) {
                 error = 0;
                 output = 0;
-                pd_reset(&pd);
+                pid_reset(&pid);
             } else {
-                output = pd_update(&pd, error);
+                output = pid_update(&pid, error);
 
                 if (output > MAX_SPEED) {
                     output = MAX_SPEED;
@@ -80,7 +78,7 @@ int main() {
             motor_update_speed_ramp(&motor_ctrl);
 
             printf("pot=%.1f err=%.1f out=%.1f cmd=%.1f der=%.1f\n",
-                   filtered_pot, error, output, motor_ctrl.command_speed, pd.derivative);
+                   filtered_pot, error, output, motor_ctrl.command_speed, pid.derivative);
 
             last_control_us += CONTROL_DT_US;
         }
