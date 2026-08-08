@@ -1,6 +1,6 @@
 # ece5610-project - Self-Balancing Weight Scale
 
-A self-balancing weight scale built around a Raspberry Pi Pico. A potentiometer senses a change in the beam's angle, a PID controller running at 100Hz computes a corrective velocity, and a stepper motor actuates a counterweight on a ball screw to balance the system.
+A self-balancing weight scale built around a Raspberry Pi Pico. A potentiometer senses a change in the beam's angle, a PID controller running at 100Hz computes a corrective velocity, and a stepper motor actuates a counterweight on a ball screw to balance the system. The weight of the item can be determined by the position at which the counterweight stops at the balance point relative to the beam. The weight can then be read from the scale on the beam.
 
 <img src="https://i.imgur.com/Nmfapxe.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 
